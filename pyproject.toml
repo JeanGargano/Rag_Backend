@@ -4,9 +4,17 @@ version = "0.1.0"
 description = ""
 authors = ["JeanGargano <159099449+JeanGargano@users.noreply.github.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
+fastapi = "^0.100.0"
+uvicorn = "^0.22.0"
+chromadb = "^0.5.5"
+onnxruntime = "^1.18.1"
+pydantic-settings = "^2.4.0"
+protobuf = ">=3.20.0,<3.21.0"
+openai = "^1.41.0"
 
 
 [build-system]
