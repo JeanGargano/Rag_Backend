@@ -1,18 +1,47 @@
-from app.core.models import Document
+from app.core.models import Document, User
 from app.core import ports
 
-
+# Implementación de los métodos definidos en las clases abstractas
 class RAGService:
-    def __init__(self, document_repo: ports.DocumentRepositoryPort, openai_adapter: ports.LlmPort):
-        self.document_repo = document_repo
-        self.openai_adapter = openai_adapter
 
+    # Instanciando objetos
+    def __init__(self, chroma_adapter: ports.DocumentRepositoryPort, openai_adapter: ports.LlmPort, mongo_adapter: ports.UserRepositoryPort):
+        self.chroma_adapter = chroma_adapter
+        self.openai_adapter = openai_adapter
+        self.mongo_adapter = mongo_adapter
+
+    # Metodo para generar respuesta
     def generate_answer(self, query: str) -> str:
-        documents = self.document_repo.get_documents(query)
+        documents = self.chroma_adapter.get_documents(query)
         print(f"Documents: {documents}")
         context = " ".join([doc.content for doc in documents])
         return self.openai_adapter.generate_text(prompt=query, retrieval_context=context)
 
+    #-----------------------------------------Métodos para documento---------------------------------------------
+
+    # Método para crear documento
     def save_document(self, content: str) -> None:
         document = Document(content=content)
-        self.document_repo.save_document(document)
+        self.chroma_adapter.save_document(document)
+
+    #------------------------------------------Métodos para usuario-------------------------------------------------
+
+    # Metodo para guardar un usuario
+    def save_user(self, user: User) -> str:
+        self.mongo_adapter.save_user(user)
+        return "El usuario se ha guardado exitosamente"
+
+    # Metodo para eliminar un usuario
+    def delete_user(self, user_id: str) -> str:
+        result = self.mongo_adapter.delete_user(user_id)
+        return result
+
+    # Metodo para actualizar un usuario
+    def update_user(self, user: User) -> str:
+        result = self.mongo_adapter.update_user(user)
+        return result
+
+    # Metodo para listar todos los usuarios
+    def list_users(self) -> str:
+        result = self.mongo_adapter.list_users()
+        return result
