@@ -1,5 +1,10 @@
+from typing import List, Optional
+
+from pyasn1.compat.octets import null
+
 from app.core.models import Document, User
-from app.core import ports
+from app.core import ports, models
+
 
 # Implementación de los métodos definidos en las clases abstractas
 class RAGService:
@@ -26,22 +31,42 @@ class RAGService:
 
     #------------------------------------------Métodos para usuario-------------------------------------------------
 
+    #Metodo para obtener un usuario por su id, sirve para el actualizar
+    def get_user_by_id(self, user_id: str) -> Optional[models.User]:
+        """Obtiene un usuario por su ID"""
+        user = self.mongo_adapter.get_user(user_id)
+        if user:
+            return models.User(**user)
+        return None
+
     # Metodo para guardar un usuario
     def save_user(self, user: User) -> str:
-        self.mongo_adapter.save_user(user)
-        return "El usuario se ha guardado exitosamente"
+        saved_user = self.mongo_adapter.save_user(user)
+        if (saved_user == null):
+            return "Los campos no pueden ser nulos"
+        if saved_user:
+            return "El usuario se ha guardado exitosamente"
+        return "Error al guardar el usuario"
 
     # Metodo para eliminar un usuario
     def delete_user(self, user_id: str) -> str:
-        result = self.mongo_adapter.delete_user(user_id)
-        return result
+        success = self.mongo_adapter.delete_user(user_id)
+        if success:
+            return "Usuario eliminado exitosamente"
+        return "Usuario no encontrado"
 
     # Metodo para actualizar un usuario
-    def update_user(self, user: User) -> str:
-        result = self.mongo_adapter.update_user(user)
-        return result
+    def update_user(self, user_id: str, update_data: dict) -> str:
+        try:
+            result = self.mongo_adapter.update_user(user_id, update_data)
+            if result:
+                return "Usuario actualizado exitosamente"
+            return "Usuario no encontrado"
+        except Exception as e:
+            print(f"Error updating user: {e}")
+            return "Error al actualizar el usuario"
 
     # Metodo para listar todos los usuarios
-    def list_users(self) -> str:
-        result = self.mongo_adapter.list_users()
-        return result
+    def list_users(self) -> List[User]:
+        users = self.mongo_adapter.list_users()
+        return users
