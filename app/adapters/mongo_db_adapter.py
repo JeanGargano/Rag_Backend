@@ -79,7 +79,8 @@ class MongoDbAdapter(ports.UserRepositoryPort):
                     name=user['name'],
                     email=user['email'],
                     password=user['password'],
-                    age=user['age']
+                    age=user['age'],
+                    rol=user["rol"]
                 ) for user in users
             ]
         except PyMongoError as e:
