@@ -13,6 +13,18 @@ rag_router = APIRouter()
 def generate_answer(query: str, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     return {"answer": rag_service.generate_answer(query)}
 
+
+
+
+
+
+
+
+
+
+
+
+
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 #Guardar documento
 @rag_router.post("/save-document/")
