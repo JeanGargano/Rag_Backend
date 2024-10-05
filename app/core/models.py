@@ -21,3 +21,7 @@ class User(pydantic.BaseModel):
     password: Optional[str] = None
     age: Optional[int] = None
     rol: Optional[str] = None
+
+class LoginRequest(pydantic.BaseModel):
+    email: str
+    password: str

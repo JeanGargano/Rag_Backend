@@ -1,3 +1,4 @@
+from http.client import HTTPException
 from typing import List, Optional
 
 from pyasn1.compat.octets import null
@@ -55,7 +56,7 @@ class RAGService:
             return "Usuario eliminado exitosamente"
         return "Usuario no encontrado"
 
-    # Metodo para actualizar un usuario
+    #Metodo para actualizar un usuario
     def update_user(self, user_id: str, update_data: dict) -> str:
         try:
             result = self.mongo_adapter.update_user(user_id, update_data)
@@ -70,3 +71,22 @@ class RAGService:
     def list_users(self) -> List[User]:
         users = self.mongo_adapter.list_users()
         return users
+
+    #Metodo para validar usuario en la BD
+    def login_user(self, email: str, password: str) -> User:
+        try:
+            usuario = self.mongo_adapter.login_user(email, password)
+
+            if usuario:
+                return usuario
+            else:
+                return None
+
+        except Exception as e:
+            print(f"Error durante el login: {e}")
+            raise e
+
+
+
+
+

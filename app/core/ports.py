@@ -49,3 +49,8 @@ class UserRepositoryPort(ABC):
     @abstractmethod
     def list_users(self) -> str:
         pass
+
+    @abstractmethod
+    def login_user(self, email: str, password: str):
+        pass
+

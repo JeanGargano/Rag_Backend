@@ -3,6 +3,8 @@ from app import usecases
 from app.api import dependencies
 from app.core import models
 from typing import List
+from app.core.models import LoginRequest
+from pydantic import BaseModel
 
 rag_router = APIRouter()
 #La linea anterior sirve para configurar rutas para cada uno de los metodos de rag service
@@ -89,4 +91,38 @@ async def list_users(rag_service: usecases.RAGService = Depends(dependencies.RAG
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+#Actualizar Rol
+@rag_router.put("/update-rol/{user_id}", status_code=200)
+async def update_user(user_id: str, user: models.User, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        # Obtener el usuario existente para asegurarse de que el usuario exista
+        existing_user = rag_service.get_user_by_id(user_id)
+        if not existing_user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # Actualiza solo los campos proporcionados
+        update_data = user.dict(exclude_unset=True)  # Solo incluye los campos que se han proporcionado
+        result = rag_service.update_user(user_id, update_data)
+        if "Error" in result:
+            raise HTTPException(status_code=404, detail=result)
+        return {"status": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+#Validar Usuario
+@rag_router.post("/user/validate")
+def validar_usuario(
+    login_request: LoginRequest,
+    rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)
+):
+    try:
+        user = rag_service.login_user(login_request.email, login_request.password)
+
+        if user is None:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado o contraseña incorrecta")
+
+        return user
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 

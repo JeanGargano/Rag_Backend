@@ -73,17 +73,32 @@ class MongoDbAdapter(ports.UserRepositoryPort):
     def list_users(self) -> List[models.User]:
         try:
             users = self.collection.find()
-            # Eliminar el campo _id y mapear los datos a User
-            return [
-                models.User(
-                    name=user['name'],
-                    email=user['email'],
-                    password=user['password'],
-                    age=user['age'],
-                    rol=user["rol"]
-                ) for user in users
-            ]
+            return users
         except PyMongoError as e:
             print(f"Error listing users: {e}")
         return []
+
+    #Metodo para actualizar rol
+
+    def login_user(self, email: str, password: str) -> models.User:
+        try:
+            print(f"Intentando iniciar sesión con email: {email}")
+            usuario_data = self.collection.find_one({"email": email})
+
+            if usuario_data is None:
+                print("Usuario no encontrado")
+                return None
+
+            if usuario_data["password"] != password:
+                print("Contraseña incorrecta")
+                return None
+
+            usuario = models.User(**usuario_data)
+            print("Inicio de sesión exitoso")
+            return usuario
+
+        except PyMongoError as e:
+            print(f"Error de base de datos: {e}")
+            raise
+
 
