@@ -43,7 +43,7 @@ class RAGService:
     # Metodo para guardar un usuario
     def save_user(self, user: User) -> str:
         saved_user = self.mongo_adapter.save_user(user)
-        if (saved_user == null):
+        if saved_user == null:
             return "Los campos no pueden ser nulos"
         if saved_user:
             return "El usuario se ha guardado exitosamente"
