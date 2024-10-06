@@ -20,6 +20,8 @@ class User(pydantic.BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     confirm_password: Optional[str] = None
+    rol: str = "cliente"
+
 
 class LoginRequest(pydantic.BaseModel):
     email: str
