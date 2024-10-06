@@ -8,11 +8,24 @@ from pydantic import BaseModel
 
 rag_router = APIRouter()
 #La linea anterior sirve para configurar rutas para cada uno de los metodos de rag service
+
 #----------------------------------------------------Endpoint para OpenAi-----------------------------------------------
 #Generar respuesta
 @rag_router.post("/generate-answer/")
 def generate_answer(query: str, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     return {"answer": rag_service.generate_answer(query)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 #Guardar documento
@@ -28,21 +41,12 @@ def save_document(document: models.Document, rag_service: usecases.RAGService = 
 
 #Guardar usuario
 @rag_router.post("/save-user/", status_code=201)
-async def save_user(user: models.User,
-                    rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+async def save_user(user: models.User, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
-        # Verificar si el correo ya está registrado
-        existing_user = rag_service.mongo_adapter.get_user_by_email(user.email)
-        if existing_user:
-            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
-
-        # Guardar el nuevo usuario
         result = rag_service.save_user(user)
         if "Error" in result:
             raise HTTPException(status_code=400, detail=result)
-
-        return {"status": "Usuario registrado exitosamente"}
-
+        return {"status": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
