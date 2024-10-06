@@ -17,6 +17,18 @@ class DocumentRepositoryPort(ABC):
     def get_documents(self, query: str) -> List[models.Document]:
         pass
 
+    @abstractmethod
+    def get_document_id(self, doc_id: str) -> List[models.Document]:
+        pass
+
+    @abstractmethod
+    def delete_document_by_id(self, doc_id: str) -> str:
+        pass
+
+    @abstractmethod
+    def update_document(self, doc_id: str, document: models.Document) -> str:
+        pass
+
 #---------------------------------Clase abstracta para openAi y sus metodos---------------------------------------------
 
 class LlmPort(ABC):

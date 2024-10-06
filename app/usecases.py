@@ -1,8 +1,5 @@
 from http.client import HTTPException
 from typing import List, Optional
-
-from pyasn1.compat.octets import null
-
 from app.core.models import Document, User
 from app.core import ports, models
 
@@ -23,12 +20,52 @@ class RAGService:
         context = " ".join([doc.content for doc in documents])
         return self.openai_adapter.generate_text(prompt=query, retrieval_context=context)
 
+
+
     #-----------------------------------------Métodos para documento---------------------------------------------
 
     # Método para crear documento
+    
     def save_document(self, content: str) -> None:
         document = Document(content=content)
         self.chroma_adapter.save_document(document)
+
+    # Método para obtener los documentos
+
+    def get_documents(self) -> List[Document]:
+        documents = self.chroma_adapter.get_documents()
+        return documents
+
+    # Método para obtener documento por ID
+
+    def get_document_id(self, doc_id: str) -> Optional[List[Document]]:
+        document = self.chroma_adapter.get_document_id(doc_id)
+        return document
+
+    # Método para actualizar el documento
+
+    def update_document(self, doc_id: str, content: str) -> str:
+        try:
+            document = Document(content=content)
+            result = self.chroma_adapter.update_document(doc_id, document)
+            if result:
+                return "Documento actualizado con éxito."
+            return "Error no se pudo actualizar el documento."
+        except Exception as e:
+            print(f"Error updating document: {e}")
+            return "Error al actualizar el usuario"
+
+
+    # Método para eliminar el documento
+
+
+    def delete_document_by_id(self, doc_id: str) -> str:
+        success = self.chroma_adapter.delete_document_by_id(doc_id)
+        if success:
+            return "Documento eliminado exitosamente"
+        return "Documento no encontrado"
+
+    
 
     #------------------------------------------Métodos para usuario-------------------------------------------------
 

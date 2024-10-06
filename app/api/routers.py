@@ -17,16 +17,6 @@ def generate_answer(query: str, rag_service: usecases.RAGService = Depends(depen
 
 
 
-
-
-
-
-
-
-
-
-
-
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 #Guardar documento
 @rag_router.post("/save-document/")
@@ -35,6 +25,50 @@ def save_document(document: models.Document, rag_service: usecases.RAGService = 
     return {"status": "Document saved successfully"}, 201
 
 #Faltan los de listar y eliminar
+
+# Listar documentos general
+@rag_router.get("/get-documents", response_model=List[models.Document])
+async def get_documents(rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        documents = rag_service.get_documents()
+        return documents
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Problemas al devolver los documentos: {str(e)}")
+
+# Listar documento ID
+
+@rag_router.get("/get-document/{doc_id}", response_model=List[models.Document])
+async def get_document_id(doc_id: str ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        document = rag_service.get_document_id(doc_id)
+        return document
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Problemas al devolver el documento: {str(e)}")
+
+# Actualizar documento por ID
+
+@rag_router.put("/update-document/{doc_id}", response_model=str)
+async def update_document(doc_id: str, document: models.Document ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        response = rag_service.update_document(doc_id, content= document.content)
+        if "Error" in response:
+            raise HTTPException(status_code=404, detail=f"No encontrado el documento {doc_id}")
+        return {"status": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# Eliminar documento por ID
+
+@rag_router.delete("/delete-document/{doc_id}" , response_model=str)
+async def delete_document_by_id(doc_id: str ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        response = rag_service.delete_document_by_id(doc_id)
+        if "no" in response:
+            raise HTTPException(status_code=404, detail=response)
+        return {"status": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 #-----------------------------------------------------Endpoints para usuarios-------------------------------------------
