@@ -1,5 +1,8 @@
 from http.client import HTTPException
 from typing import List, Optional
+
+from numpy.matlib import empty
+
 from app.core.models import Document, User
 from app.core import ports, models
 
