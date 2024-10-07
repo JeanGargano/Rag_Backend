@@ -29,11 +29,17 @@ def generate_answer(query: str, rag_service: usecases.RAGService = Depends(depen
 
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 #Guardar documento
-
+@rag_router.post("/save-document", response_model=str)
+async def save_document(content: str ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        response = rag_service.save_document(content)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Listar documentos general
 @rag_router.get("/get-documents", response_model=List[models.Document])
-async def get_documents(rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+def get_documents(rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
         documents = rag_service.get_documents()
         return documents

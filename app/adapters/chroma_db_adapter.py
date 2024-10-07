@@ -5,8 +5,8 @@ from app.core.models import Document
 
 
 class ChromaDocumentAdapter(ports.DocumentStorageStrategy):
-    def __init__(self, chroma_client):
-        self.chroma_client = chroma_client  # Cliente de ChromaDB para realizar operaciones
+    def __init__(self):
+        self.chroma_client = chromadb.Client()  # Cliente de ChromaDB para realizar operaciones
 
     def store_document(self, document: Document) -> None:
         """Almacena un documento en ChromaDB."""
