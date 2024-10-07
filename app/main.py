@@ -1,11 +1,10 @@
-# app/main.py
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 from app.api import routers
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Habilitar CORS
+# Configuración CORS: permite solicitudes desde http://127.0.0.1:5500
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -1,8 +1,6 @@
 from http.client import HTTPException
 from typing import List, Optional
 
-from pyasn1.compat.octets import null
-
 from app.core.models import Document, User
 from app.core import ports, models
 
@@ -40,10 +38,9 @@ class RAGService:
             return models.User(**user)
         return None
 
-    # Metodo para guardar un usuario
     def save_user(self, user: User) -> str:
         saved_user = self.mongo_adapter.save_user(user)
-        if saved_user == null:
+        if saved_user is None:
             return "Los campos no pueden ser nulos"
         if saved_user:
             return "El usuario se ha guardado exitosamente"
@@ -57,11 +54,11 @@ class RAGService:
         return "Usuario no encontrado"
 
     #Metodo para actualizar un usuario
-    def update_user(self, user_id: str, update_data: dict) -> str:
+    def update_user(self, user: models.User) -> str:
         try:
-            result = self.mongo_adapter.update_user(user_id, update_data)
-            if result:
-                return "Usuario actualizado exitosamente"
+            result = self.mongo_adapter.update_user(user)
+            if result == "Usuario actualizado exitosamente":
+                return result
             return "Usuario no encontrado"
         except Exception as e:
             print(f"Error updating user: {e}")

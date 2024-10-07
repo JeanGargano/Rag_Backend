@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.responses import JSONResponse
+
 from app import usecases
 from app.api import dependencies
 from app.core import models
@@ -34,17 +36,18 @@ async def save_user(user: models.User,
         # Verificar si el correo ya está registrado
         existing_user = rag_service.mongo_adapter.get_user_by_email(user.email)
         if existing_user:
-            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
+            return JSONResponse(status_code=400, content={"error": "El correo electrónico ya está registrado."})
 
         # Guardar el nuevo usuario
         result = rag_service.save_user(user)
-        if "Error" in result:
-            raise HTTPException(status_code=400, detail=result)
+        if isinstance(result, str) and "Error" in result:
+            return JSONResponse(status_code=400, content={"error": result})
 
-        return {"status": "Usuario registrado exitosamente"}
+        return JSONResponse(status_code=201, content={"status": "Usuario registrado exitosamente"})
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        print(f"Error en save_user: {str(e)}")  # Registro del error
+        return JSONResponse(status_code=500, content={"error": f"Internal server error: {str(e)}"})
 
 
 #Eliminar usuario

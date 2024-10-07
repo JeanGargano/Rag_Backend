@@ -13,13 +13,11 @@ class Document(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=generate_uuid)
     content: str
 
-#Clase para usuario
 class User(pydantic.BaseModel):
-    #Campos opcionales para el momento de actualizar
-    name: Optional[str] = None
-    email: Optional[str] = None
-    password: Optional[str] = None
-    confirm_password: Optional[str] = None
+    name: str
+    email: str
+    password: str
+    confirm_password: str
 
 class LoginRequest(pydantic.BaseModel):
     email: str

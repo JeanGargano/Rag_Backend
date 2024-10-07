@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from app.core import models
 
@@ -54,3 +54,10 @@ class UserRepositoryPort(ABC):
     def login_user(self, email: str, password: str):
         pass
 
+    @abstractmethod
+    def get_user(self, user_id):
+        pass
+
+    @abstractmethod
+    def get_user_by_email(self, email: str) -> Optional[models.User]:
+        pass

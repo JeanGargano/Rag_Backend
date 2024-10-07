@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from typing import List, Optional
 from app.core import ports, models
 from pymongo import MongoClient
@@ -38,7 +38,7 @@ class MongoDbAdapter(ports.UserRepositoryPort):
     #Metodo para crear
     def save_user(self, user: models.User) -> Optional[models.User]:
         try:
-            user_data = user.dict(by_alias=True)
+            user_data = user.model_dump(by_alias=True)
             result = self.collection.insert_one(user_data)
             if result.inserted_id:
                 return user
@@ -60,14 +60,19 @@ class MongoDbAdapter(ports.UserRepositoryPort):
             return False
 
     #Metodo para actualizar usuario
-    def update_user(self, user_id: str, update_data: dict) -> Optional[models.User]:
+    def update_user(self, user: models.User) -> str:
         try:
-            result = self.collection.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
+            # Usamos el user._id del objeto User
+            result = self.collection.update_one(
+                {"_id": ObjectId(user._id)},
+                {"$set": user.dict(exclude_unset=True)}
+            )
             if result.modified_count > 0:
-                return self.collection.find_one({"_id": ObjectId(user_id)})
+                return "Usuario actualizado exitosamente"
+            return "Usuario no encontrado"
         except PyMongoError as e:
             print(f"Error updating user: {e}")
-        return None
+            return "Error al actualizar el usuario"
 
     #Metodo para listar usuarios
     def list_users(self) -> List[models.User]:
@@ -101,4 +106,13 @@ class MongoDbAdapter(ports.UserRepositoryPort):
             print(f"Error de base de datos: {e}")
             raise
 
-
+    def get_user_by_email(self, email: str) -> Optional[models.User]:
+        try:
+            # Buscar un usuario por email
+            user_data = self.collection.find_one({"email": email})
+            if user_data:
+                return models.User(**user_data)
+            return None
+        except PyMongoError as e:
+            print(f"Error getting user by email: {e}")
+            return None
