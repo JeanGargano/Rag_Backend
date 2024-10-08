@@ -1,91 +1,57 @@
-import chromadb
-from typing import List
-from app.core import ports
-from app.core import models
+import os
+from app.core.models import Document
+from chromadb.utils import embedding_functions
+import logging
+from typing import Optional, List
 
+class ChromaDocumentAdapter:
+    def _init_(self, chroma_client, collection_name="documents", api_key=None):
+        self.chroma_client = chroma_client
+        self.collection_name = collection_name
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.embedding_function = embedding_functions.OpenAIEmbeddingFunction(api_key=self.api_key)
 
-class ChromaDBAdapter(ports.DocumentRepositoryPort):
-
-    #Conexion a la base de datos
-    def __init__(self):
-        self.client = chromadb.Client()
-        self.collection = self.client.create_collection("documents")
-
-#--------------------------------------#Metodos para la clase documento-------------------------------------------------
-
-    #Metodos para crear documento
-    def save_document(self, document: models.Document) -> None:
-        print(f"Document: {document}")
-        self.collection.add(
-            ids=[document.id],
-            documents=[document.content]
-        )
-    #metodo para listar documento
-    def get_documents(self, query: str, n_results: int = 2) -> List[models.Document]:
-        results = self.collection.query(query_texts=[query], n_results=n_results)
-        print(query)
-        print(f"Results: {results}")
-        documents = []
-        for i, doc_id_list in enumerate(results['ids']):
-            for doc_id in doc_id_list:
-                documents.append(models.Document(id=doc_id, content=results['documents'][i][0]))
-        return documents
-
-    # Método para listar documento por ID
-
-    def get_document_id(self, doc_id: str) -> List[models.Document]:
+    def save_document(self, document: Document) -> None:
+        """Guarda el documento en ChromaDB tras generar su embedding."""
         try:
-            # Buscar el documento por su ID
-            result = self.collection.get(ids=[doc_id])
+            if not document.id or not document.content:
+                raise ValueError("El documento debe tener un ID y contenido válido.")
 
-            # Si hay resultados y contienen documentos, devolver el documento como lista
-            if result and 'documents' in result and result['documents']:
-                return [models.Document(id=doc_id, content=result['documents'][0][0])]
+            collection = self.chroma_client.get_or_create_collection(self.collection_name)
 
-            # Si no se encuentra el documento, devolver una lista vacía
-            return []
+            # Generar embedding para el contenido del documento
+            embedding = self.embedding_function.create_embedding(document.content)
+
+            # Añadir el documento a la colección de ChromaDB
+            collection.add(
+                ids=[document.id],
+                embeddings=[embedding],
+                metadatas=[{"file_type": document.file_type, "content": document.content}]
+            )
+            logging.info(f"Documento {document.id} almacenado exitosamente en ChromaDB.")
+        except ValueError as ve:
+            logging.error(f"Error de validación en el documento: {ve}")
         except Exception as e:
-            print(f"Error al intentar obtener el documento con ID {doc_id}: {e}")
-            return []
+            logging.error(f"Error al almacenar el documento en ChromaDB: {e}", exc_info=True)
 
+    def get_documents(self, query: str) -> List[Document]:
+        """Obtiene documentos que coinciden con la consulta."""
+        # Buscar documentos en ChromaDB basado en la consulta
+        results = self.chroma_client.query_documents(query)
+        return [Documento(content=doc) for doc in results]
 
+    def get_document_by_id(self, doc_id: str) -> Optional[List[Document]]:
+        """Obtiene un documento específico por su ID."""
+        # Lógica para obtener un documento por ID desde ChromaDB
+        result = self.chroma_client.get_document(doc_id)
+        return [Documento(content=result)] if result else None
 
-    # Método para actualizar un documento
+    def update_document(self, doc_id: str, document: Document) -> bool:
+        """Actualiza un documento existente en ChromaDB."""
+        # Lógica para actualizar el documento en ChromaDB
+        return self.chroma_client.update_document(doc_id, document.content)
 
-    def update_document(self, doc_id: str, document: models.Document) -> str:
-        try:
-            # Primero eliminamos el documento existente por su ID
-            self.collection.delete(ids=[doc_id])
-
-            # Luego insertamos el nuevo documento con el mismo ID
-            self.collection.add(ids=[doc_id], documents=[document.content])
-
-            print(f"Documento con ID {doc_id} actualizado correctamente.")
-            return "Documento actualizado con éxito"
-        except Exception as e:
-            print(f"Error al intentar actualizar el documento con ID {doc_id}: {e}")
-            return "Error no se pudo actualizar el documento"
-
-    # Método para borrar un documento
-
-    def delete_document_by_id(self, doc_id: str) -> str:
-        try:
-            # Asumimos que collection.delete existe y acepta una lista de IDs
-            self.collection.delete(ids=[doc_id])
-            print(f"Documento con ID {doc_id} eliminado correctamente.")
-            return "Documento Eliminado con éxito de la base de datos."
-        except Exception as e:
-            print(f"Error al intentar eliminar el documento con ID {doc_id}: {e}")
-            return "Error al intentar eliminar el documento con ID: " + doc_id
-
-
-
-
-
-
-
-
-
-
-
-
+    def delete_document_by_id(self, doc_id: str) -> bool:
+        """Elimina un documento específico por su ID."""
+        # Lógica para eliminar un documento de ChromaDB
+        return self.chroma_client.delete_document(doc_id)

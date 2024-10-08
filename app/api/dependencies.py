@@ -1,5 +1,5 @@
 from app.adapters.openai_adapter import OpenAIAdapter
-from app.adapters.chroma_db_adapter import ChromaDBAdapter
+from app.adapters.chroma_db_adapter import ChromaDocumentAdapter
 from app.adapters.mongo_db_adapter import MongoDbAdapter
 from app import usecases
 from app import configurations
@@ -16,7 +16,7 @@ class RAGServiceSingleton:
             configs = configurations.Configs()
             openai_adapter = OpenAIAdapter(api_key=configs.openai_api_key, model=configs.model,
                                       max_tokens=configs.max_tokens, temperature=configs.temperature)
-            chroma_adapter = ChromaDBAdapter()
+            chroma_adapter = ChromaDocumentAdapter()
             mongo_adapter = MongoDbAdapter()
             cls._instance = usecases.RAGService(
                 chroma_adapter=chroma_adapter,

@@ -1,32 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import List
+
 
 from app.core import models
+from app.core.models import Document
 
-#--------------------------------Clase abstracta de documento y sus metodos---------------------------------------------
-
-class DocumentRepositoryPort(ABC):
-
-    #Metodo para crear
+# Interfaz del puerto (estrategia abstracta)
+class DocumentExtractorStrategy(ABC):
     @abstractmethod
-    def save_document(self, document: models.Document) -> None:
-        pass
-
-    #Metodo para listar
-    @abstractmethod
-    def get_documents(self, query: str) -> List[models.Document]:
-        pass
-
-    @abstractmethod
-    def get_document_id(self, doc_id: str) -> List[models.Document]:
-        pass
-
-    @abstractmethod
-    def delete_document_by_id(self, doc_id: str) -> str:
-        pass
-
-    @abstractmethod
-    def update_document(self, doc_id: str, document: models.Document) -> str:
+    def extract_content(self, file_path: str) -> str:
+        """Extrae el contenido del documento."""
         pass
 
 #---------------------------------Clase abstracta para openAi y sus metodos---------------------------------------------
@@ -65,4 +47,3 @@ class UserRepositoryPort(ABC):
     @abstractmethod
     def login_user(self, email: str, password: str):
         pass
-

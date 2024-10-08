@@ -1,132 +1,93 @@
-from http.client import HTTPException
+import logging
 from typing import List, Optional
 
-from numpy.matlib import empty
-
+from app.adapters.chroma_db_adapter import ChromaDocumentAdapter
+from app.adapters.mongo_db_adapter import MongoDbAdapter
+from app.adapters.openai_adapter import OpenAIAdapter
+from app.api.Strategy import PDFExtractionStrategy, DocxExtractionStrategy
 from app.core.models import Document, User
-from app.core import ports, models
 
+tipo = {
+        "pdf": PDFExtractionStrategy(),
+        "docx": DocxExtractionStrategy()
+    }
 
-# Implementación de los métodos definidos en las clases abstractas
 class RAGService:
-
-    # Instanciando objetos
-    def __init__(self, chroma_adapter: ports.DocumentRepositoryPort, openai_adapter: ports.LlmPort, mongo_adapter: ports.UserRepositoryPort):
+    def __init__(self, chroma_adapter: ChromaDocumentAdapter, openai_adapter: OpenAIAdapter, mongo_adapter: MongoDbAdapter):
         self.chroma_adapter = chroma_adapter
         self.openai_adapter = openai_adapter
         self.mongo_adapter = mongo_adapter
 
-    # Metodo para generar respuesta
-    def generate_answer(self, query: str) -> str:
-        documents = self.chroma_adapter.get_documents(query)
-        print(f"Documents: {documents}")
-        context = " ".join([doc.content for doc in documents])
-        return self.openai_adapter.generate_text(prompt=query, retrieval_context=context)
 
 
+    def chunk_content(self, content: str, chunk_size: int = 512) -> List[str]:
+        """Divide el contenido en chunks de tamaño especificado."""
+        return [content[i:i + chunk_size] for i in range(0, len(content), chunk_size)]
 
-    #-----------------------------------------Métodos para documento---------------------------------------------
-
-    # Método para crear documento
-    
-    def save_document(self, content: str) -> None:
-        document = Document(content=content)
-        self.chroma_adapter.save_document(document)
-
-    # Método para obtener los documentos
-
-    def get_documents(self) -> List[Document]:
-        documents = self.chroma_adapter.get_documents()
+    def prepare_documents(self, content: str, file_type: str, chunk_size: int = 512) -> List[Document]:
+        """Prepara una lista de documentos chunked basados en el contenido y tipo de archivo."""
+        chunks = self.chunk_content(content, chunk_size)
+        documents = [Document(file="", content=chunk, file_type=file_type) for chunk in chunks]
         return documents
 
-    # Método para obtener documento por ID
-
-    def get_document_id(self, doc_id: str) -> Optional[List[Document]]:
-        document = self.chroma_adapter.get_document_id(doc_id)
-        return document
-
-    # Método para actualizar el documento
-
-    def update_document(self, doc_id: str, content: str) -> str:
+    def save_document(self, file_path: str, file_type: str) -> str:
+        """Extrae el contenido usando la estrategia, lo divide en chunks y lo almacena."""
         try:
-            document = Document(content=content)
-            result = self.chroma_adapter.update_document(doc_id, document)
-            if result:
-                return "Documento actualizado con éxito."
-            return "Error no se pudo actualizar el documento."
+            # Obtener la estrategia del diccionario
+            strategy = tipo.get(file_type)
+            if not strategy:
+                raise ValueError(f"Tipo de archivo no soportado: {file_type}")
+
+            # Extraer contenido usando la estrategia
+            content = strategy.extract_content(file_path)
+
+            # Preparar y almacenar los chunks
+            documents = self.prepare_documents(content, file_type)
+            for doc in documents:
+                self.chroma_adapter.save_document(doc)  # Cambiar 'self.ChromaDocumentAdapter' a 'self.chroma_adapter'
+
+            return "Documento guardado exitosamente."
         except Exception as e:
-            print(f"Error updating document: {e}")
-            return "Error al actualizar el usuario"
+            logging.error(f"Error al guardar el documento: {e}")
+            return "Error al guardar el documento."
 
+    # ------------------------------------------ Métodos para usuarios ---------------------------------------------
 
-    # Método para eliminar el documento
-
-
-    def delete_document_by_id(self, doc_id: str) -> str:
-        success = self.chroma_adapter.delete_document_by_id(doc_id)
-        if success:
-            return "Documento eliminado exitosamente"
-        return "Documento no encontrado"
-
-    
-
-    #------------------------------------------Métodos para usuario-------------------------------------------------
-
-    #Metodo para obtener un usuario por su id, sirve para el actualizar
-    def get_user_by_id(self, user_id: str) -> Optional[models.User]:
-        """Obtiene un usuario por su ID"""
-        user = self.mongo_adapter.get_user(user_id)
-        if user:
-            return models.User(**user)
-        return None
-
-    # Metodo para guardar un usuario
     def save_user(self, user: User) -> str:
         saved_user = self.mongo_adapter.save_user(user)
-        if saved_user == null:
-            return "Los campos no pueden ser nulos"
+        if saved_user is None:
+            return "Los campos no pueden ser nulos."
         if saved_user:
-            return "El usuario se ha guardado exitosamente"
-        return "Error al guardar el usuario"
+            return "El usuario se ha guardado exitosamente."
+        return "Error al guardar el usuario."
 
-    # Metodo para eliminar un usuario
+
     def delete_user(self, user_id: str) -> str:
         success = self.mongo_adapter.delete_user(user_id)
         if success:
-            return "Usuario eliminado exitosamente"
-        return "Usuario no encontrado"
+            return "Usuario eliminado exitosamente."
 
-    #Metodo para actualizar un usuario
+        return "Usuario no encontrado."
+
     def update_user(self, user_id: str, update_data: dict) -> str:
         try:
             result = self.mongo_adapter.update_user(user_id, update_data)
             if result:
-                return "Usuario actualizado exitosamente"
-            return "Usuario no encontrado"
+                return "Usuario actualizado exitosamente."
+            return "Usuario no encontrado."
         except Exception as e:
-            print(f"Error updating user: {e}")
-            return "Error al actualizar el usuario"
+            logging.error(f"Error al actualizar el usuario: {e}")
+            return "Error al actualizar el usuario."
 
-    # Metodo para listar todos los usuarios
     def list_users(self) -> List[User]:
-        users = self.mongo_adapter.list_users()
-        return users
+        return self.mongo_adapter.list_users()
 
-    #Metodo para validar usuario en la BD
-    def login_user(self, email: str, password: str) -> User:
+
+    def login_user(self, email: str, password: str) -> Optional[User]:
+        """Método para validar usuario en la BD."""
         try:
-            usuario = self.mongo_adapter.login_user(email, password)
-
-            if usuario:
-                return usuario
-            else:
-                return None
-
+            user = self.mongo_adapter.login_user(email, password)
+            return user
         except Exception as e:
-            print(f"Error durante el login: {e}")
-            raise e
-
-
-
-
-
+            logging.error(f"Error durante el login: {e}")
+            return None

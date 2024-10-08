@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form
 from app import usecases
 from app.api import dependencies
 from app.core import models
 from typing import List
+
 from app.core.models import LoginRequest
-from pydantic import BaseModel
+from app.usecases import RAGService
+from fastapi import File, UploadFile
+
 
 rag_router = APIRouter()
+
 #La linea anterior sirve para configurar rutas para cada uno de los metodos de rag service
 
 #----------------------------------------------------Endpoint para OpenAi-----------------------------------------------
@@ -15,27 +20,63 @@ rag_router = APIRouter()
 def generate_answer(query: str, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     return {"answer": rag_service.generate_answer(query)}
 
-
-
-
-
-
-
-
-
-
-
-
-
 #----------------------------------------------------Endpoints para documentos------------------------------------------
-#Guardar documento
+
+
 @rag_router.post("/save-document/")
-def save_document(document: models.Document, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
-    rag_service.save_document(content=document.content)
-    return {"status": "Document saved successfully"}, 201
+async def save_document(file: UploadFile = File(...), rag_service: RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    file_content = await file.read()
 
-#Faltan los de listar y eliminar
+    # Definir la ruta donde se guardará el archivo
+    save_path = os.path.join(os.getcwd(), file.filename)
 
+    # Escribir el contenido en el disco duro
+    with open(save_path, "wb") as f:
+        f.write(file_content)
+
+    # Obtener la extensión del archivo y convertirla a minúsculas
+    file_extension = file.filename.split('.')[-1].lower()
+
+    # Llamamos al método para guardar el documento
+    result = rag_service.save_document(file_path=save_path, file_type=file_extension)
+
+    if "Error" in result:
+        return {"message": "Error al guardar el documento."}
+
+    return {"message": "Documento guardado exitosamente."}
+# Listar documentos general
+@rag_router.get("/get-documents", response_model=List[models.Document])
+def get_documents(rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        documents = rag_service.get_documents()
+        return documents
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Problemas al devolver los documentos: {str(e)}")
+
+# Listar documento ID
+
+@rag_router.get("/get-document/{doc_id}", response_model=List[models.Document])
+async def get_document_id(doc_id: str ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        document = rag_service.get_document_id(doc_id)
+        return document
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Problemas al devolver el documento: {str(e)}")
+
+# Actualizar documento por ID
+
+@rag_router.put("/update-document/{doc_id}", response_model=str)
+async def update_document(doc_id: str, document: models.Document ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        response = rag_service.update_document(doc_id, content= document.content)
+        if "Error" in response:
+            raise HTTPException(status_code=404, detail=f"No encontrado el documento {doc_id}")
+        return {"status": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# Eliminar documento por ID
 
 #-----------------------------------------------------Endpoints para usuarios-------------------------------------------
 
