@@ -1,15 +1,16 @@
 import os
 from app.core.models import Document
-from chromadb.utils import embedding_functions
 import logging
 from typing import Optional, List
+from app.configurations import Configs  # Asegúrate de importar tu clase de configuración
+from app.adapters.openai_adapter import OpenAIAdapter  # Asegúrate de importar el adaptador
 
 class ChromaDocumentAdapter:
-    def _init_(self, chroma_client, collection_name="documents", api_key=None):
+    def __init__(self, chroma_client, openai_adapter: OpenAIAdapter, config: Configs, collection_name="documents"):
         self.chroma_client = chroma_client
         self.collection_name = collection_name
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.embedding_function = embedding_functions.OpenAIEmbeddingFunction(api_key=self.api_key)
+        self.embedding_function = openai_adapter  # Usar el adaptador de OpenAI directamente
+        self.api_key = config.openai_api_key  # Almacena la clave API si necesitas usarla más tarde
 
     def save_document(self, document: Document) -> None:
         """Guarda el documento en ChromaDB tras generar su embedding."""
@@ -19,7 +20,7 @@ class ChromaDocumentAdapter:
 
             collection = self.chroma_client.get_or_create_collection(self.collection_name)
 
-            # Generar embedding para el contenido del documento
+            # Generar embedding para el contenido del documento usando el adaptador de OpenAI
             embedding = self.embedding_function.create_embedding(document.content)
 
             # Añadir el documento a la colección de ChromaDB
@@ -33,7 +34,6 @@ class ChromaDocumentAdapter:
             logging.error(f"Error de validación en el documento: {ve}")
         except Exception as e:
             logging.error(f"Error al almacenar el documento en ChromaDB: {e}", exc_info=True)
-
     def get_documents(self, query: str) -> List[Document]:
         """Obtiene documentos que coinciden con la consulta."""
         # Buscar documentos en ChromaDB basado en la consulta

@@ -3,9 +3,7 @@ from app.adapters.chroma_db_adapter import ChromaDocumentAdapter
 from app.adapters.mongo_db_adapter import MongoDbAdapter
 from app import usecases
 from app import configurations
-
-#Esta clase utiliza el patron singleton
-#Asegura que solo se creee una instacia de Rag Service y se use en todo el flujo
+import chromadb
 
 class RAGServiceSingleton:
     _instance = None
@@ -13,11 +11,25 @@ class RAGServiceSingleton:
     @classmethod
     def get_instance(cls) -> usecases.RAGService:
         if cls._instance is None:
-            configs = configurations.Configs()
-            openai_adapter = OpenAIAdapter(api_key=configs.openai_api_key, model=configs.model,
-                                      max_tokens=configs.max_tokens, temperature=configs.temperature)
-            chroma_adapter = ChromaDocumentAdapter()
+            configs = configurations.Configs()  # Crea una instancia de Configs
+
+            # Inicializa OpenAIAdapter pasando la configuración completa
+            openai_adapter = OpenAIAdapter(configs)  # Pasar la instancia de Configs
+
+            # Inicializa el cliente ChromaDB
+            chroma_client = chromadb.Client()  # Asegúrate de usar la forma correcta de inicializar el cliente
+
+            # Pasar el cliente y la configuración a ChromaDocumentAdapter
+            chroma_adapter = ChromaDocumentAdapter(
+                chroma_client=chroma_client,
+                openai_adapter=openai_adapter,  # Pasar el adaptador de OpenAI
+                config=configs  # Asegúrate de pasar la instancia de configuración
+            )
+
+            # Inicializa MongoDbAdapter
             mongo_adapter = MongoDbAdapter()
+
+            # Crea la instancia de RAGService
             cls._instance = usecases.RAGService(
                 chroma_adapter=chroma_adapter,
                 openai_adapter=openai_adapter,

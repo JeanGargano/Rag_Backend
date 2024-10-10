@@ -12,6 +12,7 @@ def generate_uuid() -> str:
 class Document(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=generate_uuid)
     content: str
+    file_type: str
 
 #Clase para usuario
 class User(pydantic.BaseModel):
