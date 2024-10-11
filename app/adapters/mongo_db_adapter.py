@@ -1,5 +1,5 @@
 from http.client import HTTPException
-from typing import List, Optional
+from typing import List, Optional, Dict
 from app.core import ports, models
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
@@ -27,13 +27,14 @@ class MongoDbAdapter(ports.UserRepositoryPort):
 
 
     #Metodo para obtener un usuario por su id
-    def get_user(self, user_id: str) -> Optional[dict]:
+    def get_user_by_id(self, user_id: str) -> Optional[dict]:
         try:
             user = self.collection.find_one({"_id": ObjectId(user_id)})
             return user
         except PyMongoError as e:
             print(f"Error getting user: {e}")
             return None
+
 
     #Metodo para crear
     def save_user(self, user: models.User) -> Optional[models.User]:
@@ -70,13 +71,31 @@ class MongoDbAdapter(ports.UserRepositoryPort):
         return None
 
     #Metodo para listar usuarios
-    def list_users(self) -> List[models.User]:
+    def list_users(self) -> List[Dict[str, str]]:
         try:
-            users = self.collection.find()
-            return users
+            # Realiza la búsqueda y selecciona solo los campos 'name' y 'email'
+            users = self.collection.find(
+                {"name": {"$ne": None}, "email": {"$ne": None}},  # Filtra usuarios donde 'name' y 'email' no sean null
+                {"name": 1, "email": 1}  # Solo selecciona 'name' y 'email'
+            )
+
+            # Convierte el cursor a una lista de diccionarios
+            user_list = []
+            for user in users:
+                # MongoDB siempre incluye el campo '_id', lo eliminamos manualmente si no lo necesitas
+                user.pop('_id', None)
+                user_list.append(user)
+
+            return user_list
+
         except PyMongoError as e:
             print(f"Error listing users: {e}")
-        return []
+            return []
+
+
+        except PyMongoError as e:
+            print(f"Error listing users: {e}")
+            return []
 
     #Metodo para actualizar rol
 

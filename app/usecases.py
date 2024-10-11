@@ -5,6 +5,7 @@ from app.adapters.chroma_db_adapter import ChromaDocumentAdapter
 from app.adapters.mongo_db_adapter import MongoDbAdapter
 from app.adapters.openai_adapter import OpenAIAdapter
 from app.api.Strategy import PDFExtractionStrategy, DocxExtractionStrategy
+from app.core import models
 from app.core.models import Document, User
 
 tipo = {
@@ -52,6 +53,13 @@ class RAGService:
             return "Error al guardar el documento."
 
     # ------------------------------------------ Métodos para usuarios ---------------------------------------------
+
+    def get_user_by_id(self, user_id: str) -> Optional[models.User]:
+        """Obtiene un usuario por su ID"""
+        user = self.mongo_adapter.get_user_by_id(user_id)
+        if user:
+            return models.User(**user)
+        return None
 
     def save_user(self, user: User) -> str:
         saved_user = self.mongo_adapter.save_user(user)

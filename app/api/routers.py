@@ -105,7 +105,7 @@ async def delete_user(user_id: str, rag_service: usecases.RAGService = Depends(d
 
 
 #Actualizar usuario
-@rag_router.put("/update-user/{user_id}", status_code=200)
+@rag_router.put("/update-rol/{user_id}", status_code=200)
 async def update_user(user_id: str, user: models.User, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
         # Obtener el usuario existente para asegurarse de que el usuario exista
