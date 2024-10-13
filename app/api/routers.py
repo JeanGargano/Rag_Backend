@@ -122,6 +122,16 @@ async def update_user(user_id: str, user: models.User, rag_service: usecases.RAG
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+# Listar usuario by ID
+
+@rag_router.get("/get-user/{user_id}", response_model=models.User)
+async def get_user_by_id( user_id: str ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    try:
+        user = rag_service.get_user_by_id(user_id)
+        return user
+
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Usuario con id: {str(user_id)} no encontrado. Error: {str(e)}")
 
 #Listar usuarios
 @rag_router.get("/list-users/", response_model=List[models.User])

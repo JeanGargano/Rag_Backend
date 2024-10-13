@@ -27,9 +27,9 @@ class MongoDbAdapter(ports.UserRepositoryPort):
 
 
     #Metodo para obtener un usuario por su id
-    def get_user_by_id(self, user_id: str) -> Optional[dict]:
+    def get_user_by_id(self, user_id: str) -> Optional[models.User]:
         try:
-            user = self.collection.find_one({"_id": ObjectId(user_id)})
+            user = self.collection.find_one({"_id": ObjectId(user_id)}, {"name": 1, "email": 1, "_id": 0})
             return user
         except PyMongoError as e:
             print(f"Error getting user: {e}")
@@ -70,28 +70,21 @@ class MongoDbAdapter(ports.UserRepositoryPort):
             print(f"Error updating user: {e}")
         return None
 
-    #Metodo para listar usuarios
+
+    # Método para listar usuarios
     def list_users(self) -> List[Dict[str, str]]:
         try:
-            # Realiza la búsqueda y selecciona solo los campos 'name' y 'email'
+            # Solo selecciona 'name' y 'email', y excluye los demás campos (incluyendo 'password' y '_id')
             users = self.collection.find(
                 {"name": {"$ne": None}, "email": {"$ne": None}},  # Filtra usuarios donde 'name' y 'email' no sean null
-                {"name": 1, "email": 1}  # Solo selecciona 'name' y 'email'
+                {"name": 1, "email": 1}
+                # Excluye 'password', 'confirm_password' y '_id'
             )
 
             # Convierte el cursor a una lista de diccionarios
-            user_list = []
-            for user in users:
-                # MongoDB siempre incluye el campo '_id', lo eliminamos manualmente si no lo necesitas
-                user.pop('_id', None)
-                user_list.append(user)
+            user_list = list(users)
 
             return user_list
-
-        except PyMongoError as e:
-            print(f"Error listing users: {e}")
-            return []
-
 
         except PyMongoError as e:
             print(f"Error listing users: {e}")

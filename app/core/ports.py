@@ -39,7 +39,14 @@ class UserRepositoryPort(ABC):
     def update_user(self, user: models.User) -> str:
         pass
 
-    #Listar Usuario
+    # Listar Usuario
+
+    @abstractmethod
+    def get_user_by_id(self, user_id: str) -> models.User:
+        pass
+
+    #Listar Usuarios
+
     @abstractmethod
     def list_users(self) -> str:
         pass
