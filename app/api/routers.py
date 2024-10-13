@@ -143,7 +143,7 @@ async def list_users(rag_service: usecases.RAGService = Depends(dependencies.RAG
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 #Actualizar Rol
-@rag_router.put("/update-rol/{user_id}", status_code=200)
+@rag_router.put("/update-user/{user_id}", status_code=200)
 async def update_user(user_id: str, user: models.User, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
         # Obtener el usuario existente para asegurarse de que el usuario exista
@@ -153,6 +153,7 @@ async def update_user(user_id: str, user: models.User, rag_service: usecases.RAG
 
         # Actualiza solo los campos proporcionados
         update_data = user.dict(exclude_unset=True)  # Solo incluye los campos que se han proporcionado
+        print(update_data)
         result = rag_service.update_user(user_id, update_data)
         if "Error" in result:
             raise HTTPException(status_code=404, detail=result)

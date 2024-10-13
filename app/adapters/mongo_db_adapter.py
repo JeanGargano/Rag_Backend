@@ -65,6 +65,7 @@ class MongoDbAdapter(ports.UserRepositoryPort):
         try:
             result = self.collection.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
             if result.modified_count > 0:
+                print(f"Modified Count: {result.modified_count}")
                 return self.collection.find_one({"_id": ObjectId(user_id)})
         except PyMongoError as e:
             print(f"Error updating user: {e}")
