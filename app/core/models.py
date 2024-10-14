@@ -3,7 +3,6 @@ from typing import Optional
 import pydantic
 import uuid
 
-#En esta archivo se definen los modelos de datos que se tendran en cuenta al momento de la persistencia
 
 def generate_uuid() -> str:
     return str(uuid.uuid4())

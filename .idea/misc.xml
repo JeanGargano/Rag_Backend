@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Poetry (Rag_Backend)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Rag_Backend" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Rag" project-jdk-type="Python SDK" />
 </project>

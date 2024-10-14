@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-
+from typing import List
 
 from app.core import models
-from app.core.models import Document
 
 # Interfaz del puerto (estrategia abstracta)
 class DocumentExtractorStrategy(ABC):
@@ -10,6 +9,8 @@ class DocumentExtractorStrategy(ABC):
     def extract_content(self, file_path: str) -> str:
         """Extrae el contenido del documento."""
         pass
+
+
 
 #---------------------------------Clase abstracta para openAi y sus metodos---------------------------------------------
 

@@ -1,4 +1,3 @@
-import os
 from app.core.models import Document
 import logging
 from typing import Optional, List
@@ -22,6 +21,10 @@ class ChromaDocumentAdapter:
 
             # Generar embedding para el contenido del documento usando el adaptador de OpenAI
             embedding = self.embedding_function.create_embedding(document.content)
+            if embedding is None:
+                raise ValueError("El embedding no se generó correctamente.")
+
+            logging.info(f"Embedding generado para el documento {document.id}: {embedding}")
 
             # Añadir el documento a la colección de ChromaDB
             collection.add(
@@ -34,22 +37,40 @@ class ChromaDocumentAdapter:
             logging.error(f"Error de validación en el documento: {ve}")
         except Exception as e:
             logging.error(f"Error al almacenar el documento en ChromaDB: {e}", exc_info=True)
-    def get_documents(self, query: str) -> List[Document]:
-        """Obtiene documentos que coinciden con la consulta."""
-        # Buscar documentos en ChromaDB basado en la consulta
-        results = self.chroma_client.query_documents(query)
-        return [Documento(content=doc) for doc in results]
+
+    def get_documents(self, query: str):
+        # Obtener o crear la colección
+        collection = self.chroma_client.get_or_create_collection(self.collection_name)
+
+        # Generar el embedding de la consulta usando OpenAI
+        embedding = self.embedding_function.create_embedding(query)
+        if embedding:
+            print("Embedding generado correctamente")
+
+        # Realizar una búsqueda de similitud por embedding
+        results = collection.query(
+            query_embeddings=[embedding],
+            n_results=1
+        )
+
+
+        documents = []
+        if 'metadatas' in results:
+            for result in results['metadatas']:
+                if isinstance(result, dict):
+                    content = result.get('content', '')
+                    documents.append(Document(content=content))
+
+        if not documents:
+            logging.warning("No se encontraron documentos para la consulta.")
+
+        return documents
 
     def get_document_by_id(self, doc_id: str) -> Optional[List[Document]]:
         """Obtiene un documento específico por su ID."""
         # Lógica para obtener un documento por ID desde ChromaDB
         result = self.chroma_client.get_document(doc_id)
         return [Documento(content=result)] if result else None
-
-    def update_document(self, doc_id: str, document: Document) -> bool:
-        """Actualiza un documento existente en ChromaDB."""
-        # Lógica para actualizar el documento en ChromaDB
-        return self.chroma_client.update_document(doc_id, document.content)
 
     def delete_document_by_id(self, doc_id: str) -> bool:
         """Elimina un documento específico por su ID."""

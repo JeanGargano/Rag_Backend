@@ -8,6 +8,7 @@ from app.api.Strategy import PDFExtractionStrategy, DocxExtractionStrategy
 from app.core import models
 from app.core.models import Document, User
 
+#Estrategias para guardar documento
 tipo = {
         "pdf": PDFExtractionStrategy(),
         "docx": DocxExtractionStrategy()
@@ -20,6 +21,16 @@ class RAGService:
         self.mongo_adapter = mongo_adapter
 
 
+#--------------------------------------------Metodo de OPENAi------------------------------------------------
+
+    def generate_answer(self, query: str) -> str:
+        documents = self.chroma_adapter.get_documents(query)
+        print(f"Documents: {documents}")
+        context = " ".join([doc.content for doc in documents])
+        return self.openai_adapter.generate_text(prompt=query, retrieval_context=context)
+
+
+#----------------------------------------------Metodos para documentos---------------------------------------
 
     def chunk_content(self, content: str, chunk_size: int = 512) -> List[str]:
         """Divide el contenido en chunks de tamaño especificado."""
@@ -51,6 +62,7 @@ class RAGService:
         except Exception as e:
             logging.error(f"Error al guardar el documento: {e}")
             return "Error al guardar el documento."
+
 
     # ------------------------------------------ Métodos para usuarios ---------------------------------------------
 

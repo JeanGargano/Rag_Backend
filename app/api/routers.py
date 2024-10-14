@@ -8,17 +8,22 @@ from typing import List
 from app.core.models import LoginRequest
 from app.usecases import RAGService
 from fastapi import File, UploadFile
+from pydantic import BaseModel
 
 
 rag_router = APIRouter()
 
-#La linea anterior sirve para configurar rutas para cada uno de los metodos de rag service
+# Definir el esquema para el cuerpo de la solicitud
+class QueryRequest(BaseModel):
+    query: str
 
-#----------------------------------------------------Endpoint para OpenAi-----------------------------------------------
-#Generar respuesta
+#----------------------------------------------------Endpoint para OpenAI-----------------------------------------------
+# Generar respuesta
 @rag_router.post("/generate-answer/")
-def generate_answer(query: str, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
-    return {"answer": rag_service.generate_answer(query)}
+def generate_answer(request: QueryRequest, rag_service: RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+    query = request.query
+    answer = rag_service.generate_answer(query)
+    return {"answer": answer}
 
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 
@@ -123,7 +128,6 @@ async def update_user(user_id: str, user: models.User, rag_service: usecases.RAG
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # Listar usuario by ID
-
 @rag_router.get("/get-user/{user_id}", response_model=models.User)
 async def get_user_by_id( user_id: str ,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
