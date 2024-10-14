@@ -25,3 +25,4 @@ class User(pydantic.BaseModel):
 class LoginRequest(pydantic.BaseModel):
     email: str
     password: str
+    admin_code: Optional[str] = None

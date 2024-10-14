@@ -25,6 +25,11 @@ def generate_answer(request: QueryRequest, rag_service: RAGService = Depends(dep
     answer = rag_service.generate_answer(query)
     return {"answer": answer}
 
+ADMIN_CODE = "5admin89x"
+
+# Función para validar el código de administrador
+def validate_admin_code(admin_code: str) -> bool:
+    return admin_code == ADMIN_CODE
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 
 
@@ -87,8 +92,13 @@ async def update_document(doc_id: str, document: models.Document ,rag_service: u
 
 #Guardar usuario
 @rag_router.post("/save-user/", status_code=201)
-async def save_user(user: models.User, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+async def save_user(user: models.User, admin_code: Optional[str] = None,
+                    rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
+        # Si el rol es administrador, se requiere el código de administrador
+        if user.rol == "Administrador" and not validate_admin_code(admin_code):
+            raise HTTPException(status_code=403, detail="Código de administrador incorrecto")
+
         result = rag_service.save_user(user)
         if "Error" in result:
             raise HTTPException(status_code=400, detail=result)
