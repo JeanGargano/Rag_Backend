@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form
 from app import usecases
 from app.api import dependencies
 from app.core import models
-from typing import List
+from typing import List, Optional
 
 from app.core.models import LoginRequest
 from app.usecases import RAGService
@@ -95,7 +95,6 @@ async def update_document(doc_id: str, document: models.Document ,rag_service: u
 async def save_user(user: models.User, admin_code: Optional[str] = None,
                     rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
-        # Si el rol es administrador, se requiere el código de administrador
         if user.rol == "Administrador" and not validate_admin_code(admin_code):
             raise HTTPException(status_code=403, detail="Código de administrador incorrecto")
 
@@ -177,18 +176,14 @@ async def update_user(user_id: str, user: models.User, rag_service: usecases.RAG
 
 #Validar Usuario
 @rag_router.post("/user/validate")
-def validar_usuario(
-    login_request: LoginRequest,
-    rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)
-):
+async def validar_usuario(login_request: models.LoginRequest, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
         user = rag_service.login_user(login_request.email, login_request.password)
-
         if user is None:
             raise HTTPException(status_code=404, detail="Usuario no encontrado o contraseña incorrecta")
 
-        return user
-
+        # Si el login es exitoso, devolvemos los detalles del usuario (incluyendo su rol)
+        return {"name": user.name, "email": user.email, "rol": user.rol}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 

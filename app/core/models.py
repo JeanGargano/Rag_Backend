@@ -18,11 +18,10 @@ class User(pydantic.BaseModel):
     #Campos opcionales para el momento de actualizar
     name: Optional[str] = None
     email: Optional[str] = None
-    rol: str = "Usuario"
     password: Optional[str] = None
     confirm_password: Optional[str] = None
+    rol: str = "Usuario"
 
 class LoginRequest(pydantic.BaseModel):
     email: str
     password: str
-    admin_code: Optional[str] = None
