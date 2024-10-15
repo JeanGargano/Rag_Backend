@@ -39,27 +39,27 @@ class ChromaDocumentAdapter:
             logging.error(f"Error al almacenar el documento en ChromaDB: {e}", exc_info=True)
 
     def get_documents(self, query: str):
-        # Obtener o crear la colección
         collection = self.chroma_client.get_or_create_collection(self.collection_name)
-
-        # Generar el embedding de la consulta usando OpenAI
         embedding = self.embedding_function.create_embedding(query)
         if embedding:
             print("Embedding generado correctamente")
 
-        # Realizar una búsqueda de similitud por embedding
         results = collection.query(
             query_embeddings=[embedding],
-            n_results=1
+            n_results=5
         )
 
+        print(f"Resultados completos de ChromaDB: {results}")
 
         documents = []
-        if 'metadatas' in results:
-            for result in results['metadatas']:
-                if isinstance(result, dict):
-                    content = result.get('content', '')
-                    documents.append(Document(content=content))
+        if 'metadatas' in results and results['metadatas']:
+            for metadata in results['metadatas'][0]:  # Accede al primer elemento de la lista
+                if isinstance(metadata, dict):
+                    content = metadata.get('content', '')
+                    file_type = metadata.get('file_type', '')
+                    documents.append(Document(content=content, file_type=file_type))
+
+        print(f"Documentos encontrados: {len(documents)}")
 
         if not documents:
             logging.warning("No se encontraron documentos para la consulta.")
