@@ -1,5 +1,5 @@
 from http.client import HTTPException
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from app.core import ports, models
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
@@ -27,9 +27,12 @@ class MongoDbAdapter(ports.UserRepositoryPort):
 
 
     #Metodo para obtener un usuario por su id
-    def get_user_by_id(self, user_id: str) -> Optional[models.User]:
+    def get_user_by_id(self, user_id: str) -> Optional[dict]:
         try:
-            user = self.collection.find_one({"_id": ObjectId(user_id)}, {"name": 1, "email": 1, "_id": 0})
+            user = self.collection.find_one({"_id": ObjectId(user_id)})
+            if user:
+                user['id'] = str(user['_id'])  # Convertir ObjectId a string
+                del user['_id']  # Eliminar el campo '_id'
             return user
         except PyMongoError as e:
             print(f"Error getting user: {e}")
@@ -73,20 +76,20 @@ class MongoDbAdapter(ports.UserRepositoryPort):
 
 
     # Método para listar usuarios
-    def list_users(self) -> List[Dict[str, str]]:
+    def list_users(self) -> List[Dict[str, Any]]:
         try:
-            # Solo selecciona 'name' y 'email', y excluye los demás campos (incluyendo 'password' y '_id')
             users = self.collection.find(
-                {"name": {"$ne": None}, "email": {"$ne": None}},  # Filtra usuarios donde 'name' y 'email' no sean null
-                {"name": 1, "email": 1}
-                # Excluye 'password', 'confirm_password' y '_id'
+                {"name": {"$ne": None}, "email": {"$ne": None}},
+                {"_id": 1, "name": 1, "email": 1, "rol": 1, "password": 1}
             )
-
-            # Convierte el cursor a una lista de diccionarios
-            user_list = list(users)
-
+            user_list = [{
+                "id": str(user["_id"]),
+                "name": user["name"],
+                "email": user["email"],
+                "rol": user.get("rol", "N/A"),
+                "password": user.get("password", "N/A")
+            } for user in users]
             return user_list
-
         except PyMongoError as e:
             print(f"Error listing users: {e}")
             return []

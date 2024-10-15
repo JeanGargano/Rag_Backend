@@ -16,6 +16,7 @@ class Document(pydantic.BaseModel):
 #Clase para usuario
 class User(pydantic.BaseModel):
     #Campos opcionales para el momento de actualizar
+    id: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
