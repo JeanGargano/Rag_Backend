@@ -176,14 +176,15 @@ async def update_user(user_id: str, user: models.User, rag_service: usecases.RAG
 
 #Validar Usuario
 @rag_router.post("/user/validate")
-async def validar_usuario(login_request: models.LoginRequest, rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+async def validar_usuario(login_request: LoginRequest,rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
     try:
         user = rag_service.login_user(login_request.email, login_request.password)
+
         if user is None:
             raise HTTPException(status_code=404, detail="Usuario no encontrado o contraseña incorrecta")
 
-        # Si el login es exitoso, devolvemos los detalles del usuario (incluyendo su rol)
-        return {"name": user.name, "email": user.email, "rol": user.rol}
+        return user
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
