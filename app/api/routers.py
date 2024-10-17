@@ -1,5 +1,9 @@
+import logging
 import os
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form
+import tempfile
+
+from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks
+
 from app import usecases
 from app.api import dependencies
 from app.core import models
@@ -20,9 +24,11 @@ class QueryRequest(BaseModel):
 #----------------------------------------------------Endpoint para OpenAI-----------------------------------------------
 # Generar respuesta
 @rag_router.post("/generate-answer/")
-def generate_answer(request: QueryRequest, rag_service: RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
-    query = request.query
-    answer = rag_service.generate_answer(query)
+async def generate_answer(
+    query: str = Body(..., embed=True),
+    rag_service: RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)
+):
+    answer = await rag_service.generate_answer(query)
     return {"answer": answer}
 
 ADMIN_CODE = "5admin89x"
@@ -33,27 +39,41 @@ def validate_admin_code(admin_code: str) -> bool:
 #----------------------------------------------------Endpoints para documentos------------------------------------------
 
 
-@rag_router.post("/save-document/")
-async def save_document(file: UploadFile = File(...), rag_service: RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):
+@rag_router.post("/save-document")
+async def save_document(
+    file: UploadFile = File(...),
+    rag_service: RAGService = Depends(dependencies.RAGServiceSingleton.get_instance),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
     file_content = await file.read()
-
-    # Definir la ruta donde se guardará el archivo
-    save_path = os.path.join(os.getcwd(), file.filename)
-
-    # Escribir el contenido en el disco duro
-    with open(save_path, "wb") as f:
-        f.write(file_content)
-
-    # Obtener la extensión del archivo y convertirla a minúsculas
     file_extension = file.filename.split('.')[-1].lower()
 
-    # Llamamos al método para guardar el documento
-    result = rag_service.save_document(file_path=save_path, file_type=file_extension)
+    # Add the document processing to background tasks
+    background_tasks.add_task(process_document, file_content, file_extension, rag_service)
 
-    if "Error" in result:
-        return {"message": "Error al guardar el documento."}
+    return {"message": "Documento recibido y procesado"}
 
-    return {"message": "Documento guardado exitosamente."}
+async def process_document(file_content: bytes, file_extension: str, rag_service: RAGService):
+    # Process the document in the background
+    try:
+        # Save the file temporarily if needed
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
+            temp_file.write(file_content)
+            temp_file_path = temp_file.name
+
+        result = await rag_service.save_document(file_path=temp_file_path, file_type=file_extension)
+
+        if "Error" in result:
+            logging.error(f"Error saving document: {result}")
+        else:
+            logging.info("Document saved successfully")
+
+    except Exception as e:
+        logging.error(f"Error processing document: {e}")
+    finally:
+        # Clean up the temporary file
+        if 'temp_file_path' in locals():
+            os.unlink(temp_file_path)
 # Listar documentos general
 @rag_router.get("/get-documents", response_model=List[models.Document])
 def get_documents(rag_service: usecases.RAGService = Depends(dependencies.RAGServiceSingleton.get_instance)):

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from app.adapters.chroma_db_adapter import ChromaDocumentAdapter
 from app.adapters.mongo_db_adapter import MongoDbAdapter
@@ -23,12 +23,10 @@ class RAGService:
 
 #--------------------------------------------Metodo de OPENAi------------------------------------------------
 
-    def generate_answer(self, query: str) -> str:
+    async def generate_answer(self, query: str) -> str:
         documents = self.chroma_adapter.get_documents(query)
-        print(f"Documents: {documents}")
         context = " ".join([doc.content for doc in documents])
-        return self.openai_adapter.generate_text(prompt=query, retrieval_context=context)
-
+        return await self.openai_adapter.generate_text(query, context)
 
 #----------------------------------------------Metodos para documentos---------------------------------------
 
@@ -36,32 +34,28 @@ class RAGService:
         """Divide el contenido en chunks de tamaño especificado."""
         return [content[i:i + chunk_size] for i in range(0, len(content), chunk_size)]
 
-    def prepare_documents(self, content: str, file_type: str, chunk_size: int = 512) -> List[Document]:
+    def prepare_documents(self, content: str, file_type: str, chunk_size: int = 1024) -> List[Document]:
         """Prepara una lista de documentos chunked basados en el contenido y tipo de archivo."""
         chunks = self.chunk_content(content, chunk_size)
         documents = [Document(file="", content=chunk, file_type=file_type) for chunk in chunks]
         return documents
 
-    def save_document(self, file_path: str, file_type: str) -> str:
-        """Extrae el contenido usando la estrategia, lo divide en chunks y lo almacena."""
+    async def save_document(self, file_path: str, file_type: str) -> Dict[str, str]:
         try:
-            # Obtener la estrategia del diccionario
             strategy = tipo.get(file_type)
             if not strategy:
                 raise ValueError(f"Tipo de archivo no soportado: {file_type}")
 
-            # Extraer contenido usando la estrategia
             content = strategy.extract_content(file_path)
-
-            # Preparar y almacenar los chunks
             documents = self.prepare_documents(content, file_type)
-            for doc in documents:
-                self.chroma_adapter.save_document(doc)  # Cambiar 'self.ChromaDocumentAdapter' a 'self.chroma_adapter'
 
-            return "Documento guardado exitosamente."
+            # Usar el nuevo método para guardar en lote
+            await self.chroma_adapter.save_documents(documents)
+
+            return {"message": "Documento guardado exitosamente"}
         except Exception as e:
             logging.error(f"Error al guardar el documento: {e}")
-            return "Error al guardar el documento."
+            return {"Error": str(e)}
 
 
     # ------------------------------------------ Métodos para usuarios ---------------------------------------------
