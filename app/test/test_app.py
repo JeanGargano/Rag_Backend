@@ -1,13 +1,34 @@
 import pytest
 from unittest.mock import MagicMock
+import os
+from pathlib import Path
 
-from app.adapters.mongo_db_adapter import MongoDbAdapter
 from app.core.models import User
 from app.usecases import RAGService
-from dotenv import load_dotenv
-from app.core import models, ports
+from app.core import ports
+from app.configurations import get_configs
 
+# Asegurarse de que el archivo .env.test existe y tiene las variables correctas
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_env():
+    """Crear archivo .env.test temporal para las pruebas"""
+    env_test_path = Path('.env.test')
+    env_content = """
+OPENAI_API_KEY=test-key
+MODEL=gpt-4
+MAX_TOKENS=80
+TEMPERATURE=0.7
+"""
+    env_test_path.write_text(env_content.strip())
+    yield
+    # Limpieza después de las pruebas
+    if env_test_path.exists():
+        env_test_path.unlink()
 
+@pytest.fixture(scope="session")
+def app_config(setup_test_env):
+    """Fixture para cargar la configuración de test."""
+    return get_configs('.env.test')
 
 @pytest.fixture
 def mock_mongo_adapter():
@@ -15,12 +36,11 @@ def mock_mongo_adapter():
     return MagicMock(spec=ports.UserRepositoryPort)
 
 @pytest.fixture
-def rag_service(mock_mongo_adapter):
+def rag_service(mock_mongo_adapter, app_config):
     """Fixture para crear una instancia de RAGService con el mock del adaptador."""
     chroma_adapter = MagicMock()
     openai_adapter = MagicMock()
     return RAGService(chroma_adapter, openai_adapter, mock_mongo_adapter)
-
 
 def test_get_user_by_id_found(rag_service, mock_mongo_adapter):
     """Prueba de get_user_by_id cuando el usuario es encontrado."""

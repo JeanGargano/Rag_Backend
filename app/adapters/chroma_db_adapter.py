@@ -53,9 +53,13 @@ class ChromaDocumentAdapter:
 
     def get_document_by_id(self, doc_id: str) -> Optional[List[Document]]:
         """Obtiene un documento específico por su ID."""
-        # Lógica para obtener un documento por ID desde ChromaDB
-        result = self.chroma_client.get_document(doc_id)
-        return [Document(content=result)] if result else None
+        try:
+            result = self.chroma_client.get_document(doc_id)
+            if result:
+                return [Document(content=result, file_type="txt")]
+            return None
+        except Exception as e:
+            raise Exception(f"Error retrieving document: {str(e)}")
 
     def delete_document_by_id(self, doc_id: str) -> bool:
         """Elimina un documento específico por su ID."""
