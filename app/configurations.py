@@ -1,4 +1,10 @@
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+import os
+
+load_dotenv('.env.test')
+
+
 
 class Configs(BaseSettings):
     openai_api_key: str
@@ -7,7 +13,7 @@ class Configs(BaseSettings):
     temperature: float
 
     class Config:
-        env_file = ".env"
+        env_file = ".env.test"
 
 # Cargar la configuración
 config = Configs()
