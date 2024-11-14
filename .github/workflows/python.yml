@@ -1,34 +1,77 @@
-name: Python Package using Conda
+name: Python CI
 
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  build-linux:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 5
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+    # Check out code
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    # Set up Python environment
+    - name: Set up Python
+      uses: actions/setup-python@v2
       with:
         python-version: '3.10'
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
+
+    # Install dependencies with pip
     - name: Install dependencies
       run: |
-        conda env update --file environment.yml --name base
-    - name: Lint with flake8
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # Set environment variables for tests
+    - name: Set environment variables
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        conda install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
+        echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
+        echo "MODEL=gpt-3.5-turbo" >> .env
+        echo "MAX_TOKENS=2048" >> .env
+        echo "TEMPERATURE=0.7" >> .env
+        echo "NUMBER_OF_VECTORIAL_RESULTS=5" >> .env
+        echo "DB_NAME=rag_db" >> .env
+
+    # Install Docker and Docker Compose
+    - name: Remove conflicting packages
       run: |
-        conda install pytest
-        pytest
+        sudo apt-get remove -y docker docker-engine docker.io containerd runc
+
+    - name: Update package list
+      run: sudo apt-get update
+
+    - name: Install Docker
+      run: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+
+    # Start Docker services
+    - name: Start Docker services
+      run: docker-compose up -d
+
+    # Run tests with pytest
+    - name: Run tests
+      run: |
+        pytest --cov=app --cov-report=xml
+
+    # Upload coverage report to Codecov
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        flags: smart-tests
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
